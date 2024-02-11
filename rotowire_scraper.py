@@ -9,6 +9,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
+from unidecode import unidecode
+from selenium.webdriver.chrome.options import Options
 
 
 def remove_name_extension(name):
@@ -19,7 +21,8 @@ def remove_name_extension(name):
     cleaned_name = name.replace("'", "").replace("-", "")
     for suffix in suffixes_to_remove:
         cleaned_name = cleaned_name.replace(suffix, "").strip()
-    return cleaned_name
+    
+    return unidecode(cleaned_name)
 
 
 # Function to scrape and save data
@@ -117,7 +120,13 @@ def get_projections():
     dataframes = []
     for key, value in urls.items():
         # Set up the web driver (make sure to specify the path to your browser driver)
-        driver = webdriver.Chrome()
+
+        # Set Chrome options
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+
+        # Initialize Chrome WebDriver with options
+        driver = webdriver.Chrome(options=chrome_options)
         print("Query", key, value, flush=True)
         try:
             dataframes.append(scrape_and_save_data(driver, url_root, value))

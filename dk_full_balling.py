@@ -10,6 +10,8 @@ from pydfs_lineup_optimizer import get_optimizer, Site, Sport
 
 import csv
 import os, glob
+from unidecode import unidecode
+
 
 print("Args:", str(sys.argv))
 
@@ -40,7 +42,7 @@ def gen_pydfs(in_filename, out_filename):
     optimizer.export(out_filename)
 
 
-soccer_projections = rotowire_scraper.get_projections();
+soccer_projections = None
 
 newpath = 'results'
 if not os.path.exists(newpath):
@@ -52,7 +54,17 @@ if not os.path.exists(newpath):
 
 now = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-soccer_projections.to_csv(newpath + "/soccer_projections_" + now + ".csv");
+
+def remove_name_extension(name):
+    """
+    Remove specific name extensions from a given name.
+    """
+    suffixes_to_remove = ["Jr.", "Sr.", "II", "III", "IV", "Ph.D."]  # Add more suffixes if needed
+    cleaned_name = name.replace("'", "").replace("-", "")
+    for suffix in suffixes_to_remove:
+        cleaned_name = cleaned_name.replace(suffix, "").strip()
+    
+    return unidecode(cleaned_name)
 
 for contest in contests.contests:
     starting_time = contest.starts_at
@@ -70,13 +82,17 @@ for contest in contests.contests:
         DK_CONTEST_URL = "https://www.draftkings.com/lineup/getavailableplayerscsv?contestTypeId=96&draftGroupId=" + str(
             contest.draft_group_id)
 
+        if soccer_projections is None:
+            soccer_projections = rotowire_scraper.get_projections();
+            soccer_projections.to_csv(newpath + "/soccer_projections_" + now + ".csv");
+
         teams = contest.name[contest.name.find("(") + 1:contest.name.find(")")].replace(' ', '_')
 
         LOGDATE = central.strftime("%Y%m%d-%H%M%S")
 
         dk_df = pandas.read_csv(DK_CONTEST_URL, encoding='latin1')
-        dk_df['Name'] = dk_df.Name.str.replace('Jr.', '').replace('Sr.', '').replace(' III', '').replace('Fuller V',
-                                                                                                         'Fuller').str.strip()
+        dk_df['Name'] = dk_df['Name'].apply(remove_name_extension)
+        
         dk_df.to_csv(
             "scratch/roster_" + teams + "_" + LOGDATE + "_" + now + "_" + str(contest.entries_details.maximum) + ".csv",
             index=False);
